@@ -1,0 +1,26 @@
+/* css/style.css */
+
+/* 스크롤바 숨기기 (깔끔한 UI를 위해) */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* 텍스트 드래그 방지 (앱처럼 보이게) */
+body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 입력창 등에서는 텍스트 선택 가능하게 복구 */
+input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}

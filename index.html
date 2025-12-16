@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bic Trading 출하업무 System</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <link rel="stylesheet" href="css/style.css">
+    
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f0f4f8; }
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="min-h-screen text-gray-700 flex flex-col select-none">
+
+    <div id="loading-state" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-sm text-gray-500">System Loading...</p>
+    </div>
+    
+    <div id="toast-notification" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none invisible">
+        <div class="bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg flex items-center space-x-2">
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span id="toast-message" class="text-sm font-bold">알림</span>
+        </div>
+    </div>
+
+    <div id="undo-toast" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[60] transition-all duration-300 translate-y-24 opacity-0 w-full max-w-sm px-4 pointer-events-none invisible">
+        <div class="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <span class="text-sm font-bold">완료 처리됨</span>
+            </div>
+            <button id="undo-btn" class="text-sm font-bold text-yellow-400 hover:text-yellow-300 px-3 py-1 rounded border border-gray-600 hover:border-yellow-400 transition-colors pointer-events-auto">
+                ↩ 실행 취소
+            </button>
+        </div>
+    </div>
+    
+    <div id="login-container" class="hidden flex-1 flex items-center justify-center px-6 bg-gray-100">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
+            <div class="text-center mb-8">
+                <img src="logo.png" class="h-32 mx-auto mb-6 object-contain drop-shadow-md">
+                <h1 class="text-2xl font-extrabold text-blue-800">Bic Trading</h1>
+                <p class="text-sm text-gray-400 mt-1">출하업무시스템</p>
+            </div>
+            <form id="login-form">
+                <input type="email" id="email" class="w-full bg-gray-50 border p-3 rounded-lg mb-3" placeholder="ID (Email)" autocomplete="email">
+                <input type="password" id="password" class="w-full bg-gray-50 border p-3 rounded-lg mb-6" placeholder="Password" autocomplete="current-password">
+                <p id="login-error" class="text-orange-500 text-xs text-center mb-2 min-h-[1rem]"></p>
+                <button type="submit" id="btn-login" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-lg shadow-lg transition transform active:scale-95">
+                    로그인
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden flex-1 flex flex-col max-w-md mx-auto w-full bg-gray-50 shadow-2xl min-h-screen relative">
+        <header class="bg-gradient-to-br from-blue-700 to-blue-900 text-white px-5 pt-12 pb-4 shadow-lg sticky top-0 z-50">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center space-x-3">
+                    <img src="logo.png" class="h-10 w-auto bg-white rounded-md p-1 shadow-sm">
+                    <h1 class="font-extrabold text-2xl tracking-tight">출하업무</h1>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span id="user-info" class="text-xs text-blue-200"></span>
+                    <button id="btn-logout" class="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition">Logout</button>
+                </div>
+            </div>
+            <div class="flex bg-white rounded-lg p-1 shadow-inner">
+                <div id="tab-orders" class="flex-1 py-3 text-center text-sm font-bold text-blue-700 border-b-4 border-blue-700 bg-blue-50 rounded-md cursor-pointer transition-all relative">📋 발주서</div>
+                <div id="tab-picking" class="flex-1 py-3 text-center text-sm font-bold text-gray-400 cursor-pointer transition-all hover:text-gray-600 relative">🏃 피킹</div>
+                <div id="tab-completed" class="flex-1 py-3 text-center text-sm font-bold text-gray-400 cursor-pointer transition-all hover:text-gray-600 relative">✅ 완료</div>
+                
+                <div id="tab-memo" class="flex-1 py-3 text-center text-sm font-bold text-gray-400 cursor-pointer transition-all hover:text-gray-600 relative">
+                    💬 메모
+                    <span id="badge-memo" class="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full hidden border border-white shadow-sm" style="transform: translate(25%, -25%);">N</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="static-filter-panel" class="hidden sticky top-[160px] z-40 bg-white p-3 border-b border-gray-200 shadow-sm space-y-2">
+            <div class="flex items-center space-x-2">
+                <input type="date" id="start-date" class="border p-1.5 rounded text-xs w-full bg-gray-50">
+                <span class="text-gray-400">~</span>
+                <input type="date" id="end-date" class="border p-1.5 rounded text-xs w-full bg-gray-50">
+            </div>
+            <div class="relative">
+                <input type="text" id="search-keyword" placeholder="발주번호 검색..." class="border p-2 pl-8 rounded text-xs w-full focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-gray-50">
+                <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+        </div>
+
+        <div id="list-container" class="flex-1 p-4 overflow-y-auto pb-24 z-0 min-h-[50vh]"></div>
+
+        <div id="bottom-bar" class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 p-3 flex items-center gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40"></div>
+    </div>
+
+    <input type="file" id="excel-upload" accept=".xlsx, .xls" class="hidden">
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
