@@ -76,9 +76,12 @@ function renderByOrderGroup(container, orders) {
         const items = groups[orderId];
         const isExpanded = window.expandedGroups && window.expandedGroups.has(orderId);
 
-        const totalCount = items.length;
-        const doneCount = items.filter(i => i.status === 'Completed').length;
-        const isAllDone = (totalCount > 0 && totalCount === doneCount);
+        // 🔥 Fix: Use total_group_count for correct progress calculation
+        const safeTotal = items[0].total_group_count || items.length;
+        const currentPending = items.length;
+        const doneCount = safeTotal - currentPending;
+        const totalCount = safeTotal;
+        const isAllDone = (currentPending === 0);
 
         let badgeHTML = '';
         let bgClass = '';
