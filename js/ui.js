@@ -28,10 +28,10 @@ export function updateTabStyle(currentTab) {
     tabs.forEach(t => {
         const el = document.getElementById(`tab-${t}`);
         if (!el) return;
-        
+
         if (t === currentTab) {
-            let color = (t === 'completed') ? 'green' : 'blue'; 
-            if (t === 'memo') color = 'gray'; 
+            let color = (t === 'completed') ? 'green' : 'blue';
+            if (t === 'memo') color = 'gray';
             el.className = `flex-1 py-3 text-center text-sm font-bold cursor-pointer transition-colors text-${color}-700 border-b-4 border-${color}-700 bg-${color}-50 relative`;
         } else {
             el.className = `flex-1 py-3 text-center text-sm font-bold cursor-pointer transition-colors text-gray-400 hover:text-gray-600 hover:bg-gray-50 relative`;
@@ -51,7 +51,7 @@ export function updateTabStyle(currentTab) {
 export function renderList(containerId, tabMode, orders) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    container.innerHTML = ''; 
+    container.innerHTML = '';
 
     if (!orders || orders.length === 0) {
         container.innerHTML = emptyStateHTML('데이터가 없습니다.');
@@ -71,11 +71,11 @@ export function renderList(containerId, tabMode, orders) {
 function renderByOrderGroup(container, orders) {
     const groups = {};
     orders.forEach(o => { if (!groups[o.order_id]) groups[o.order_id] = []; groups[o.order_id].push(o); });
-    
+
     Object.keys(groups).sort().forEach((orderId) => {
         const items = groups[orderId];
         const isExpanded = window.expandedGroups && window.expandedGroups.has(orderId);
-        
+
         const totalCount = items.length;
         const doneCount = items.filter(i => i.status === 'Completed').length;
         const isAllDone = (totalCount > 0 && totalCount === doneCount);
@@ -84,10 +84,10 @@ function renderByOrderGroup(container, orders) {
         let bgClass = '';
         if (isAllDone) {
             badgeHTML = `<span class="shrink-0 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">DONE</span>`;
-            bgClass = 'bg-green-50'; 
+            bgClass = 'bg-green-50';
         } else if (doneCount > 0) {
-             badgeHTML = `<span class="shrink-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">작업중</span>`;
-             bgClass = 'bg-white';
+            badgeHTML = `<span class="shrink-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">작업중</span>`;
+            bgClass = 'bg-white';
         } else {
             badgeHTML = `<span class="shrink-0 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">ORDER</span>`;
             bgClass = 'bg-white';
@@ -95,7 +95,7 @@ function renderByOrderGroup(container, orders) {
 
         const div = document.createElement('div');
         div.className = 'mb-4 rounded-xl shadow-sm border border-gray-200 overflow-hidden ' + bgClass;
-        
+
         const header = `
             <div onclick="window.ui_toggleAccordion('${orderId}')" class="px-4 py-4 border-b border-gray-200 flex flex-col cursor-pointer hover:bg-gray-100 transition select-none">
                 <div class="flex justify-between items-center w-full">
@@ -104,7 +104,7 @@ function renderByOrderGroup(container, orders) {
                         <div class="flex flex-col flex-1 min-w-0">
                             <h3 class="font-bold text-gray-800 text-sm truncate">${orderId}</h3>
                             <span class="text-[10px] text-gray-500 font-bold">
-                                ${doneCount} / ${totalCount} 완료 (${Math.round((doneCount/totalCount)*100)}%)
+                                ${doneCount} / ${totalCount} 완료 (${Math.round((doneCount / totalCount) * 100)}%)
                             </span>
                         </div>
                     </div>
@@ -120,7 +120,7 @@ function renderByOrderGroup(container, orders) {
                 ${items[0].client_remark ? `<div class="mt-2 text-xs font-bold text-red-600 bg-red-50 p-2 rounded border border-red-200">🚨 ${items[0].client_remark}</div>` : ''}
             </div>
             <div id="content-${orderId}" class="divide-y divide-gray-100 ${isExpanded ? '' : 'hidden'} bg-white">
-                ${items.sort((a,b)=>a.product_name.localeCompare(b.product_name)).map(item => createRowHTML(item)).join('')}
+                ${items.sort((a, b) => a.product_name.localeCompare(b.product_name)).map(item => createRowHTML(item)).join('')}
             </div>
         `;
         div.innerHTML = header;
@@ -141,7 +141,7 @@ function renderAllPicking(container, orders) {
         const items = brandGroups[brand];
         const brandColor = stringToDarkColor(brand);
         const bgColor = stringToColor(brand);
-        const brandId = `brand-${brand.replace(/\s/g, '')}`; 
+        const brandId = `brand-${brand.replace(/\s/g, '')}`;
         const isCollapsed = window.collapsedBrands && window.collapsedBrands.has(brandId);
 
         const div = document.createElement('div');
@@ -155,7 +155,7 @@ function renderAllPicking(container, orders) {
         });
 
         let productsHTML = Object.values(productGroups)
-            .sort((a,b) => a.product_name.localeCompare(b.product_name))
+            .sort((a, b) => a.product_name.localeCompare(b.product_name))
             .map(group => `
                 <div class="mb-3 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <div class="px-4 py-3 bg-indigo-50 border-b border-gray-200 flex justify-between items-start"
@@ -177,9 +177,9 @@ function renderAllPicking(container, orders) {
                     </div>
                     <div class="divide-y divide-gray-50">
                         ${group.list.map(item => {
-                            const clientName = item.order_id.split('-').pop(); // 업체명 추출
-                            return createPickingRowHTML(item, clientName);
-                        }).join('')}
+                const clientName = item.order_id.split('-').pop(); // 업체명 추출
+                return createPickingRowHTML(item, clientName);
+            }).join('')}
                     </div>
                 </div>
             `).join('');
@@ -206,12 +206,18 @@ function renderCompletedList(container, orders) {
     const groups = {};
     orders.forEach(o => { if (!groups[o.order_id]) groups[o.order_id] = []; groups[o.order_id].push(o); });
 
+    // 🔥 Load downloaded state
+    const downloadedIds = getDownloadedList();
+
     Object.keys(groups).sort().reverse().forEach(orderId => {
         const items = groups[orderId];
         const totalCount = items[0].total_group_count || items.length;
-        const doneCount = items.length; 
+        const doneCount = items.length;
         const isAllDone = (totalCount > 0 && totalCount === doneCount);
         const isExpanded = window.expandedGroups && window.expandedGroups.has(orderId);
+
+        // Check if downloaded
+        const isDownloaded = downloadedIds.includes(orderId);
 
         let badgeHTML = '';
         let bgClass = '';
@@ -226,11 +232,32 @@ function renderCompletedList(container, orders) {
             bgClass = 'bg-orange-50';
             borderClass = 'border-orange-100';
         }
-        
+
+        // Apply downloaded style override
+        let divBgClass = 'bg-white';
+        let divOpacity = '';
+        let badgeVisibility = 'hidden';
+
+        if (isDownloaded) {
+            divBgClass = 'bg-gray-100'; // Override container bg
+            divOpacity = 'opacity: 0.75;';
+            badgeVisibility = ''; // Remove hidden
+
+            // Note: We might want to keep the header color, but usually 'saved' implies sort of archived/grayed out.
+            // keeping original header colors (green/orange) but graying out the card body is what the original ui_markDownloaded did (added bg-gray-100 to the whole group).
+            // Let's mimic that:
+            // The original code added 'bg-gray-100' to the *container div*.
+        }
+
         const div = document.createElement('div');
         div.id = `group-${orderId}`;
-        div.className = `mb-4 bg-white rounded-xl shadow-sm border ${borderClass} overflow-hidden transition duration-500`;
-        
+        // If downloaded, add bg-gray-100 and border-gray-300 override
+        const finalBorderClass = isDownloaded ? 'border-gray-300' : borderClass;
+        const finalBgClass = isDownloaded ? 'bg-gray-100' : 'bg-white';
+
+        div.className = `mb-4 ${finalBgClass} rounded-xl shadow-sm border ${finalBorderClass} overflow-hidden transition duration-500`;
+        if (isDownloaded) div.style.cssText = divOpacity;
+
         // 🔥 헤더 부분 UI 수정
         div.innerHTML = `
             <div onclick="window.ui_toggleAccordion('${orderId}')" class="${bgClass} px-4 py-4 border-b ${borderClass} flex flex-col cursor-pointer transition select-none">
@@ -241,7 +268,7 @@ function renderCompletedList(container, orders) {
                         <div class="flex flex-col flex-1 min-w-0">
                             <h3 class="font-bold text-gray-800 text-sm flex flex-wrap items-center gap-1.5 break-words whitespace-normal leading-snug">
                                 <span class="mr-1">${orderId}</span>
-                                <span id="download-badge-${orderId}" class="hidden shrink-0 text-[10px] font-bold bg-gray-500 text-white px-2 py-0.5 rounded border border-gray-400 shadow-sm">
+                                <span id="download-badge-${orderId}" class="${badgeVisibility} shrink-0 text-[10px] font-bold bg-gray-500 text-white px-2 py-0.5 rounded border border-gray-400 shadow-sm">
                                     ✅ 저장됨
                                 </span>
                             </h3>
@@ -279,10 +306,10 @@ function createRowHTML(item, clientName = null) {
 
     const isLotError = (item.ordered_qty % calcLot !== 0);
     const qtyColor = isLotError ? 'text-red-600' : 'text-blue-800';
-    const lotBadge = isLotError 
+    const lotBadge = isLotError
         ? `<span class="text-[10px] text-red-600 font-bold ml-1 bg-red-50 px-1 rounded border border-red-100 flex items-center">⚠ LOT:${rawLot}</span>`
         : `<span class="text-[10px] text-gray-500">| LOT: ${rawLot}</span>`;
-    
+
     const clientTag = clientName ? `<div class="mb-1"><span class="bg-gray-100 text-gray-700 text-[10px] px-1.5 py-0.5 rounded font-bold">${clientName}</span></div>` : '';
 
     return `
@@ -402,11 +429,11 @@ window.ui_toggleAccordion = (id) => {
     if (!c) return;
     if (c.classList.contains('hidden')) {
         c.classList.remove('hidden');
-        if(i) i.classList.add('rotate-180');
+        if (i) i.classList.add('rotate-180');
         window.expandedGroups.add(id);
     } else {
         c.classList.add('hidden');
-        if(i) i.classList.remove('rotate-180');
+        if (i) i.classList.remove('rotate-180');
         window.expandedGroups.delete(id);
     }
 };
@@ -418,20 +445,25 @@ window.ui_toggleBrand = (id) => {
     if (!c) return;
     if (c.classList.contains('hidden')) {
         c.classList.remove('hidden');
-        if(i) i.classList.add('rotate-180');
+        if (i) i.classList.add('rotate-180');
         window.collapsedBrands.delete(id);
     } else {
         c.classList.add('hidden');
-        if(i) i.classList.remove('rotate-180');
+        if (i) i.classList.remove('rotate-180');
         window.collapsedBrands.add(id);
     }
 };
 
 // 다운로드 완료 시각적 표시
 window.ui_markDownloaded = (orderId) => {
+    // 1. Storage 저장
+    saveDownloadedList(orderId);
+
+    // 2. DOM 업데이트
     const group = document.getElementById(`group-${orderId}`);
     const badge = document.getElementById(`download-badge-${orderId}`);
     if (group) {
+        group.classList.remove('bg-white');
         group.classList.add('bg-gray-100', 'border-gray-300'); // 회색으로 변경
         group.style.opacity = '0.75';
     }
@@ -440,6 +472,31 @@ window.ui_markDownloaded = (orderId) => {
     }
 };
 
+// ===================================
+// Helper functions for LocalStorage
+// ===================================
+function getDownloadedList() {
+    try {
+        const stored = localStorage.getItem('bic_downloaded_orders');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.error("Storage Error:", e);
+        return [];
+    }
+}
+
+function saveDownloadedList(orderId) {
+    try {
+        const list = getDownloadedList();
+        if (!list.includes(orderId)) {
+            list.push(orderId);
+            localStorage.setItem('bic_downloaded_orders', JSON.stringify(list));
+        }
+    } catch (e) {
+        console.error("Storage Write Error:", e);
+    }
+}
+
 let pressTimer;
 window.ui_startPress = (text) => {
     if (pressTimer) clearTimeout(pressTimer);
@@ -447,7 +504,7 @@ window.ui_startPress = (text) => {
         navigator.clipboard.writeText(text).then(() => {
             showToast(`복사됨: ${text}`);
             if (navigator.vibrate) navigator.vibrate(50);
-        }).catch(() => {});
+        }).catch(() => { });
     }, 800);
 };
 
