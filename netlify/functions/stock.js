@@ -16,15 +16,6 @@ exports.handler = async (event) => {
     const TOKEN = process.env.BOXHERO_TOKEN;
     const TEAM_ID = process.env.BOXHERO_TEAM_ID;
 
-    // ▼▼▼▼▼ [스파이 코드] 로그 심기 (여기서 범인을 잡는다) ▼▼▼▼▼
-    console.log("========================================");
-    console.log("🕵️‍♂️ [DEBUG] Netlify 서버 환경변수 실토 시간");
-    console.log(`1. Team ID: [${TEAM_ID}]`); // 대괄호 [] 안에 공백이 있는지 확인 필수!
-    console.log(`2. Token (앞 5자리): [${TOKEN ? TOKEN.substring(0, 5) : '없음'}]...`);
-    console.log(`3. 요청 바코드: ${requestedBarcode}`);
-    console.log("========================================");
-    // ▲▲▲▲▲ [스파이 코드 끝] ▲▲▲▲▲
-
     // [안전장치] 만약 넷리파이 설정이 덜 됐다면 바로 에러 뿜고 종료
     if (!TOKEN || !TEAM_ID) {
         console.error("[Config Error] 환경변수(TOKEN 또는 TEAM_ID)가 설정되지 않았습니다.");
@@ -41,7 +32,7 @@ exports.handler = async (event) => {
     let pageCount = 0;
     const cleanBarcode = requestedBarcode.trim();
 
-    console.log(`[Stock API] 바코드 ${cleanBarcode} 조회 시작...`);
+    // console.log(`[Stock API] 바코드 ${cleanBarcode} 조회 시작...`); // 로그 최소화
 
     try {
         // 4. 전수 조사 루프 (찾을 때까지 페이지 넘김)
@@ -84,7 +75,7 @@ exports.handler = async (event) => {
             });
 
             if (foundItem) {
-                console.log(`[Success] ${pageCount}번째 페이지에서 물건 발견! (${foundItem.name})`);
+                // console.log(`[Success] 발견!`);
                 break;
             }
 
