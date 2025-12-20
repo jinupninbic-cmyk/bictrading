@@ -22,6 +22,23 @@ let searchKeyword = '';
 let filterStartDate = getPastDateStr(2);
 let filterEndDate = getTodayStr();
 
+// [추가] 재고 영구 저장을 위한 설정
+const STOCK_STORAGE_KEY = 'bic_stock_cache_v1';
+
+function loadStockState() {
+    try {
+        const saved = localStorage.getItem(STOCK_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+        console.error("Stock Load Error:", e);
+        return {};
+    }
+}
+
+function saveStockState() {
+    localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(window.stockState));
+}
+
 // ============================================================
 // 2. 초기화 및 이벤트 리스너
 // ============================================================
@@ -345,11 +362,8 @@ window.app_deleteOrderGroup = async (id) => {
 // [수정됨] 재고 조회 함수 (상태 저장 기능 + 인라인 표시 추가)
 // ============================================================
 
-// ============================================================
-// [수정됨] 재고 조회 함수 (팝업 삭제 / 버튼 고정 / 전역 업데이트)
-// ============================================================
-
-window.stockState = window.stockState || {}; 
+// [변경점 1] 저장된 재고 상태 불러오기 (앱 시작 시 초기화)
+window.stockState = loadStockState(); 
 
 window.app_checkStock = async (janCode, btn, totalReq = null) => {
     if (!janCode) return alert("JAN 코드가 없습니다.");
@@ -379,10 +393,13 @@ window.app_checkStock = async (janCode, btn, totalReq = null) => {
             // [성공]
             const currentStock = data.qty !== undefined ? data.qty : 0;
             
-            // 1. 상태 저장
+            // 1. 상태 업데이트 (메모리)
             window.stockState[janCode] = currentStock;
 
-            // 2. [수정] 팝업 삭제 -> UI 즉시 갱신 (화면에 있는 모든 동일 상품 갱신)
+            // [변경점 2] 영구 저장소에 즉시 백업 (새로고침 방어)
+            saveStockState(); 
+
+            // 3. UI 갱신
             updateStockUI(janCode, currentStock);
         }
 
