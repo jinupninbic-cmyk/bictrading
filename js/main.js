@@ -7,7 +7,7 @@ import { showLoginScreen, showAppScreen, toggleLoading, updateTabStyle, renderLi
 import { parseExcelFile, exportOrdersToExcel } from "./excel.js";
 import { showToast, showUndoToast, getTodayStr, getPastDateStr } from "./utils.js";
 import { sendMemo, subscribeToMemos, countUnreadMemos, markAsRead } from "./memo.js";
-import { getStockByBarcode } from "./boxhero.js";
+
 
 // ============================================================
 // 1. 상태 관리
@@ -341,25 +341,104 @@ window.app_deleteOrderGroup = async (id) => {
     if(!confirm(`[ ${id} ] 삭제하시겠습니까?`)) return; toggleLoading(true);
     try { const c = await deleteOrderByID(id); alert(`삭제됨 (${c}건)`); } catch(e) { alert(e.message); } finally { toggleLoading(false); }
 };
-window.app_checkStock = async (janCode, btn) => {
+// ============================================================
+// [수정됨] 재고 조회 함수 (상태 저장 기능 + 인라인 표시 추가)
+// ============================================================
+
+// ============================================================
+// [수정됨] 재고 조회 함수 (팝업 삭제 / 버튼 고정 / 전역 업데이트)
+// ============================================================
+
+window.stockState = window.stockState || {}; 
+
+window.app_checkStock = async (janCode, btn, totalReq = null) => {
     if (!janCode) return alert("JAN 코드가 없습니다.");
 
+    // [수정] 버튼 사이즈 고정 (w-20: 약 80px) 및 로딩 내용 변경
     const originalHTML = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = `<div class="animate-spin h-3 w-3 border-b-2 border-indigo-600 rounded-full"></div>`; // 로딩 중 표시
+    btn.innerHTML = `<div class="flex items-center justify-center"><div class="animate-spin h-3 w-3 border-b-2 border-indigo-600 rounded-full"></div></div>`;
 
     try {
-        const result = await getStockByBarcode(janCode);
-        if (result) {
-            alert(`📦 [박스히어로 재고]\n\n품명: ${result.name}\n현재고: ${result.qty}개\n안전재고: ${result.safe_qty || 0}개`);
-        } else {
-            alert("❌ 박스히어로에 등록되지 않은 상품입니다.");
+        const response = await fetch(`/.netlify/functions/stock?barcode=${encodeURIComponent(janCode)}`);
+
+        if (response.status === 429) {
+            throw new Error("⏳ 천천히!");
         }
+        
+        const data = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                // 없는 상품은 팝업 띄우는 게 맞음 (경고니까)
+                alert(`❌ [미등록]\n\n박스히어로에 없는 상품입니다.`);
+            } else {
+                throw new Error(data.error || "에러");
+            }
+        } else {
+            // [성공]
+            const currentStock = data.qty !== undefined ? data.qty : 0;
+            
+            // 1. 상태 저장
+            window.stockState[janCode] = currentStock;
+
+            // 2. [수정] 팝업 삭제 -> UI 즉시 갱신 (화면에 있는 모든 동일 상품 갱신)
+            updateStockUI(janCode, currentStock);
+        }
+
     } catch (e) {
-        alert("조회 실패: 잠시 후 다시 시도해주세요.");
-    } finally {
-        btn.innerHTML = originalHTML;
-        btn.disabled = false;
-    }
+        console.error(e);
+        const msg = e.message.includes("Rate Limit") ? "천천히!" : "에러";
+        // 에러 시 버튼에 잠깐 표시
+        btn.innerHTML = `<span class="text-xs text-red-500">${msg}</span>`;
+        setTimeout(() => { btn.innerHTML = originalHTML; btn.disabled = false; }, 1000);
+        return; // finally로 바로 가지 않게 처리
+    } 
+
+    // 정상 복구
+    btn.innerHTML = originalHTML;
+    btn.disabled = false;
 };
+
+// [Helper] 화면 내 모든 해당 상품의 재고 표시 갱신 (탭별 스타일 구분 적용)
+function updateStockUI(janCode, currentStock) {
+    const displayElements = document.querySelectorAll(`.stock-display-jan-${janCode}`);
+    
+    displayElements.forEach(el => {
+        // [수정] 탭별 스타일 분기 처리
+        if (el.classList.contains('stock-style-order')) {
+            // [발주서 탭] 요청수량과 동일한 text-2xl font-black 적용
+            el.innerHTML = `
+                <span class="block text-[10px] text-gray-500 font-bold mb-0.5 text-right">현재고</span>
+                <span class="block text-2xl font-black text-gray-800 leading-none text-right">${currentStock}</span>
+            `;
+        } else {
+            // [피킹 탭] 기존 디자인 유지 (text-lg font-bold)
+            el.innerHTML = `
+                <span class="block text-[10px] text-gray-400 font-bold mb-0.5 text-right">현재고</span>
+                <span class="block text-lg font-bold text-gray-800 leading-none text-right">${currentStock}</span>
+            `;
+        }
+        el.classList.remove('hidden');
+    });
+
+    // 피킹 탭 경고 로직 (유지)
+    const qtyText = document.getElementById(`qty-text-${janCode}`);
+    const warningBadge = document.getElementById(`stock-warning-${janCode}`);
+    const totalReqEl = document.getElementById(`qty-req-val-${janCode}`);
+
+    if (qtyText && warningBadge && totalReqEl) {
+        const totalReq = parseInt(totalReqEl.dataset.value || 0);
+        if (currentStock < totalReq) {
+            qtyText.classList.remove('text-indigo-700', 'text-green-600');
+            qtyText.classList.add('text-red-600');
+            warningBadge.classList.remove('hidden');
+        } else {
+            qtyText.classList.remove('text-indigo-700', 'text-red-600');
+            qtyText.classList.add('text-green-600');
+            warningBadge.classList.add('hidden');
+        }
+    }
+}
+
 renderButtons();

@@ -131,7 +131,7 @@ function renderByOrderGroup(container, orders) {
     });
 }
 
-// [Mode 2] 전체 피킹
+// [수정됨] 피킹 탭 (버튼 고정, 정렬 맞춤, 짤림 방지, 뱃지 수정)
 function renderAllPicking(container, orders) {
     const brandGroups = {};
     orders.forEach(item => {
@@ -139,6 +139,8 @@ function renderAllPicking(container, orders) {
         if (!brandGroups[brand]) brandGroups[brand] = [];
         brandGroups[brand].push(item);
     });
+
+    const stockState = window.stockState || {};
 
     Object.keys(brandGroups).sort().forEach(brand => {
         const items = brandGroups[brand];
@@ -148,7 +150,8 @@ function renderAllPicking(container, orders) {
         const isCollapsed = window.collapsedBrands && window.collapsedBrands.has(brandId);
 
         const div = document.createElement('div');
-        div.className = 'mb-6 bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 relative z-0';
+        // [수정] overflow-hidden 제거 -> overflow-visible (뱃지 안 짤리게)
+        div.className = 'mb-6 bg-white rounded-xl shadow-md border border-gray-100 relative z-0';
 
         const productGroups = {};
         items.forEach(item => {
@@ -159,33 +162,77 @@ function renderAllPicking(container, orders) {
 
         let productsHTML = Object.values(productGroups)
             .sort((a, b) => a.product_name.localeCompare(b.product_name))
-            .map(group => `
-                <div class="mb-3 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="px-4 py-3 bg-indigo-50 border-b border-gray-200 flex justify-between items-start"
+            .map(group => {
+                const savedStock = stockState[group.jan_code]; 
+                const hasSavedData = (savedStock !== undefined);
+                
+                let qtyColorClass = 'text-indigo-700';
+                let badgeClass = 'hidden';
+                let inlineDisplayHTML = '';
+
+                if (hasSavedData) {
+                    // [수정] Total과 높이/폰트 완벽 일치 (라벨 위, 숫자 아래)
+                    inlineDisplayHTML = `
+                        <span class="block text-[10px] text-gray-400 font-bold mb-0.5 text-right">현재고</span>
+                        <span class="block text-lg font-bold text-gray-800 leading-none text-right">${savedStock}</span>
+                    `;
+                    
+                    if (savedStock < group.totalReq) {
+                        qtyColorClass = 'text-red-600';
+                        badgeClass = '';
+                    } else {
+                        qtyColorClass = 'text-green-600';
+                    }
+                }
+
+                return `
+                <div class="mb-3 bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-4 py-3 bg-indigo-50 border-b border-gray-200 flex justify-between items-center relative"
                          onmousedown="window.ui_startPress('${group.jan_code}')" 
                          onmouseup="window.ui_cancelPress()" 
                          ontouchstart="window.ui_startPress('${group.jan_code}')" 
                          ontouchend="window.ui_cancelPress()">
-                        <div class="overflow-hidden mr-2 flex-1">
-                            <h4 class="font-bold text-gray-800 text-sm leading-snug whitespace-normal break-words">${group.product_name}</h4>
-                            <div class="flex items-center space-x-2 mt-1">
-                                <span class="text-[10px] font-bold bg-white text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">${group.jan_code}</span>
+                        
+                        <div class="overflow-hidden mr-2 flex-1 min-w-0">
+                            <h4 class="font-bold text-gray-800 text-sm leading-snug whitespace-normal break-words mb-2">${group.product_name}</h4>
+                            <div class="flex items-center flex-wrap gap-2">
+                                <span class="text-[10px] font-bold bg-white text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100 font-mono">${group.jan_code}</span>
                                 <span class="text-[10px] text-gray-500">LOT: ${group.lot_qty || 1}</span>
+                                
+                                <button onclick="event.stopPropagation(); window.app_checkStock('${group.jan_code}', this, ${group.totalReq})" 
+                                        class="w-16 h-7 flex items-center justify-center bg-white border border-indigo-300 text-indigo-700 rounded shadow-sm active:scale-95 transition group">
+                                    <span class="text-xs font-bold">🔍 재고</span>
+                                </button>
                             </div>
                         </div>
-                        <div class="text-right shrink-0 ml-2">
+
+                        <div class="stock-display-jan-${group.jan_code} flex-col items-end justify-center mr-4 px-2 border-r border-indigo-200 min-w-[3.5rem] ${hasSavedData ? 'flex' : 'hidden'}">
+                            ${inlineDisplayHTML}
+                        </div>
+
+                        <div class="text-right shrink-0 relative">
+                            <div id="stock-warning-${group.jan_code}" class="${badgeClass} absolute -top-5 -right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md animate-pulse whitespace-nowrap z-20 border border-white">
+                                🚨 재고부족
+                            </div>
+
+                            <input type="hidden" id="qty-req-val-${group.jan_code}" data-value="${group.totalReq}">
+
                             <span class="block text-[10px] text-gray-500 font-bold uppercase">Total</span>
-                            <span class="block text-xl font-black text-indigo-700 leading-none">${group.totalReq}</span>
+                            <span id="qty-text-${group.jan_code}" class="block text-xl font-black ${qtyColorClass} leading-none transition-colors duration-300">
+                                ${group.totalReq}
+                            </span>
                         </div>
                     </div>
+
                     <div class="divide-y divide-gray-50">
                         ${group.list.map(item => {
-                const clientName = item.order_id.split('-').pop(); // 업체명 추출
+                const clientName = item.order_id.split('-').pop(); 
                 return createPickingRowHTML(item, clientName);
             }).join('')}
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
         const header = `
             <div onclick="window.ui_toggleBrand('${brandId}')" class="px-5 py-4 border-b border-gray-100 flex justify-between items-center cursor-pointer select-none transition hover:opacity-90 sticky top-0 z-10" style="background-color: ${bgColor};">
@@ -296,7 +343,7 @@ function renderCompletedList(container, orders) {
     });
 }
 
-// [Helper] 공통 행 HTML (기본)
+// [수정됨] 발주서 탭 (재고 폰트를 '요청'과 동일하게 text-2xl font-black 적용)
 function createRowHTML(item, clientName = null) {
     const rawLot = item.lot_qty || 1;
     let calcLot = 1;
@@ -315,42 +362,69 @@ function createRowHTML(item, clientName = null) {
 
     const clientTag = clientName ? `<div class="mb-1"><span class="bg-gray-100 text-gray-700 text-[10px] px-1.5 py-0.5 rounded font-bold">${clientName}</span></div>` : '';
 
+    const stockState = window.stockState || {};
+    const savedStock = stockState[item.jan_code];
+    const hasSavedData = (savedStock !== undefined);
+
+    let inlineDisplayHTML = '';
+    if (hasSavedData) {
+        // [수정] 폰트 크기 text-2xl font-black 으로 키움
+        inlineDisplayHTML = `
+            <span class="block text-[10px] text-gray-500 font-bold mb-0.5 text-right">현재고</span>
+            <span class="block text-2xl font-black text-gray-800 leading-none text-right">${savedStock}</span>
+        `;
+    }
+
     return `
         <div class="p-3 border-b border-gray-100 hover:bg-blue-50 transition-colors bg-white">
             ${clientTag}
-            <div class="flex justify-between items-center">
-                <div class="flex-1 min-w-0 pr-3">
-                    <div class="flex items-center space-x-2 mb-0.5 flex-wrap">
-                        <span class="text-[10px] text-blue-600 font-bold">${item.brand || ''}</span>
-                        ${lotBadge}
-                    </div>
-                    <p class="text-sm font-bold text-gray-800 whitespace-normal break-words leading-tight">${item.product_name}</p>
-                    <div class="flex items-center mt-1 space-x-2">
-    <p class="text-xs text-gray-500 font-mono font-bold cursor-pointer hover:text-blue-600 transition" 
-       onmousedown="window.ui_startPress('${item.jan_code}')" 
-       onmouseup="window.ui_cancelPress()" 
-       ontouchstart="window.ui_startPress('${item.jan_code}')" 
-       ontouchend="window.ui_cancelPress()">
-       ${item.jan_code}
-    </p>
+            
+            <div class="mb-3">
+                <div class="flex items-center space-x-2 mb-1">
+                    <span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">${item.brand || 'Brand'}</span>
+                    ${lotBadge}
+                </div>
+                <h3 class="text-sm font-bold text-gray-800 leading-snug mb-2 break-words">${item.product_name}</h3>
 
-    <button onclick="event.stopPropagation(); window.app_checkStock('${item.jan_code}', this)" 
-            class="flex items-center space-x-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded px-1.5 py-0.5 transition shadow-sm active:scale-95 group"
-            title="박스히어로 재고 조회">
-        <span class="text-[10px] font-bold">🔍 재고</span>
-    </button>
-</div>
-                <div class="flex items-center space-x-2 shrink-0">
-                    <div class="flex flex-col items-end mr-1">
-                        <span class="text-[10px] text-gray-400">요청</span>
-                        <span class="text-xl font-extrabold ${qtyColor}">${item.ordered_qty}</span>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-xs font-mono font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 transition" 
+                              onmousedown="window.ui_startPress('${item.jan_code}')" 
+                              onmouseup="window.ui_cancelPress()" 
+                              ontouchstart="window.ui_startPress('${item.jan_code}')" 
+                              ontouchend="window.ui_cancelPress()">
+                           ${item.jan_code}
+                        </span>
+
+                        <button onclick="event.stopPropagation(); window.app_checkStock('${item.jan_code}', this)" 
+                                class="w-16 h-7 flex items-center justify-center bg-white border border-indigo-300 text-indigo-700 rounded shadow-sm active:scale-95 transition group">
+                            <span class="text-xs font-bold">🔍 재고</span>
+                        </button>
                     </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-2 border border-gray-200 flex items-center justify-between">
+                
+                <div class="flex items-center space-x-3">
+                    <div class="flex flex-col px-2 border-l-4 border-blue-400">
+                        <span class="text-[10px] text-gray-500 font-bold mb-0.5">요청</span>
+                        <span class="text-2xl font-black ${qtyColor} leading-none">${item.ordered_qty}</span>
+                    </div>
+
+                    <div class="stock-display-jan-${item.jan_code} stock-style-order flex flex-col justify-end px-2 border-l border-gray-200 min-w-[3rem] ${hasSavedData ? '' : 'hidden'}">
+                        ${inlineDisplayHTML}
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
                     <input type="number" value="${item.picked_qty || item.ordered_qty}" 
-                        class="w-14 h-10 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 text-lg shadow-sm"
-                        onchange="window.app_updateQty('${item.id}', this.value)" onclick="event.stopPropagation()">
+                           class="w-16 h-12 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 text-xl shadow-sm bg-white"
+                           onchange="window.app_updateQty('${item.id}', this.value)" onclick="event.stopPropagation()">
+                    
                     <button onclick="event.stopPropagation(); window.app_completeOrder('${item.id}', this)" 
-                        class="h-10 w-12 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center justify-center shadow-sm active:scale-95 transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            class="h-12 w-14 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center justify-center shadow-md active:scale-95 transition">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                     </button>
                 </div>
             </div>
