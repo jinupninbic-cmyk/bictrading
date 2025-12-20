@@ -7,6 +7,7 @@ import { showLoginScreen, showAppScreen, toggleLoading, updateTabStyle, renderLi
 import { parseExcelFile, exportOrdersToExcel } from "./excel.js";
 import { showToast, showUndoToast, getTodayStr, getPastDateStr } from "./utils.js";
 import { sendMemo, subscribeToMemos, countUnreadMemos, markAsRead } from "./memo.js";
+import { getStockByBarcode } from "./boxhero.js";
 
 // ============================================================
 // 1. 상태 관리
@@ -340,5 +341,25 @@ window.app_deleteOrderGroup = async (id) => {
     if(!confirm(`[ ${id} ] 삭제하시겠습니까?`)) return; toggleLoading(true);
     try { const c = await deleteOrderByID(id); alert(`삭제됨 (${c}건)`); } catch(e) { alert(e.message); } finally { toggleLoading(false); }
 };
+window.app_checkStock = async (janCode, btn) => {
+    if (!janCode) return alert("JAN 코드가 없습니다.");
 
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<div class="animate-spin h-3 w-3 border-b-2 border-indigo-600 rounded-full"></div>`; // 로딩 중 표시
+
+    try {
+        const result = await getStockByBarcode(janCode);
+        if (result) {
+            alert(`📦 [박스히어로 재고]\n\n품명: ${result.name}\n현재고: ${result.qty}개\n안전재고: ${result.safe_qty || 0}개`);
+        } else {
+            alert("❌ 박스히어로에 등록되지 않은 상품입니다.");
+        }
+    } catch (e) {
+        alert("조회 실패: 잠시 후 다시 시도해주세요.");
+    } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+    }
+};
 renderButtons();

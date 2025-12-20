@@ -1,0 +1,5 @@
+[build]
+  # 일반 웹사이트 파일 위치 (현재 폴더)
+  publish = "."
+  # 서버 함수 파일 위치 (우리가 만든 폴더)
+  functions = "netlify/functions"

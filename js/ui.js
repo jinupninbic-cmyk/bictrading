@@ -325,13 +325,21 @@ function createRowHTML(item, clientName = null) {
                         ${lotBadge}
                     </div>
                     <p class="text-sm font-bold text-gray-800 whitespace-normal break-words leading-tight">${item.product_name}</p>
-                    <p class="text-xs text-gray-400 font-mono mt-0.5 cursor-pointer" 
-                       onmousedown="window.ui_startPress('${item.jan_code}')" 
-                       onmouseup="window.ui_cancelPress()" 
-                       ontouchstart="window.ui_startPress('${item.jan_code}')" 
-                       ontouchend="window.ui_cancelPress()">${item.jan_code}</p>
-                    ${item.remark ? `<div class="mt-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">📢 ${item.remark}</div>` : ''}
-                </div>
+                    <div class="flex items-center mt-1 space-x-2">
+    <p class="text-xs text-gray-500 font-mono font-bold cursor-pointer hover:text-blue-600 transition" 
+       onmousedown="window.ui_startPress('${item.jan_code}')" 
+       onmouseup="window.ui_cancelPress()" 
+       ontouchstart="window.ui_startPress('${item.jan_code}')" 
+       ontouchend="window.ui_cancelPress()">
+       ${item.jan_code}
+    </p>
+
+    <button onclick="event.stopPropagation(); window.app_checkStock('${item.jan_code}', this)" 
+            class="flex items-center space-x-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded px-1.5 py-0.5 transition shadow-sm active:scale-95 group"
+            title="박스히어로 재고 조회">
+        <span class="text-[10px] font-bold">🔍 재고</span>
+    </button>
+</div>
                 <div class="flex items-center space-x-2 shrink-0">
                     <div class="flex flex-col items-end mr-1">
                         <span class="text-[10px] text-gray-400">요청</span>
