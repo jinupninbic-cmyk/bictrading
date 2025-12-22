@@ -368,7 +368,6 @@ window.stockState = loadStockState();
 window.app_checkStock = async (janCode, btn, totalReq = null) => {
     if (!janCode) return alert("JAN 코드가 없습니다.");
 
-    // [수정] 버튼 사이즈 고정 (w-20: 약 80px) 및 로딩 내용 변경
     const originalHTML = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<div class="flex items-center justify-center"><div class="animate-spin h-3 w-3 border-b-2 border-indigo-600 rounded-full"></div></div>`;
@@ -384,19 +383,19 @@ window.app_checkStock = async (janCode, btn, totalReq = null) => {
 
         if (!response.ok) {
             if (response.status === 404) {
-                // 없는 상품은 팝업 띄우는 게 맞음 (경고니까)
                 alert(`❌ [미등록]\n\n박스히어로에 없는 상품입니다.`);
             } else {
                 throw new Error(data.error || "에러");
             }
         } else {
-            // [성공]
-            const currentStock = data.qty !== undefined ? data.qty : 0;
+            // [성공] 박스히어로 데이터 필드명 안전 처리 (qty, quantity, stock 등 모두 확인)
+            const rawQty = data.quantity ?? data.stock ?? data.total_quantity ?? data.qty ?? 0;
+            const currentStock = Number(rawQty);
             
             // 1. 상태 업데이트 (메모리)
             window.stockState[janCode] = currentStock;
 
-            // [변경점 2] 영구 저장소에 즉시 백업 (새로고침 방어)
+            // 2. 영구 저장소에 즉시 백업
             saveStockState(); 
 
             // 3. UI 갱신
@@ -406,13 +405,11 @@ window.app_checkStock = async (janCode, btn, totalReq = null) => {
     } catch (e) {
         console.error(e);
         const msg = e.message.includes("Rate Limit") ? "천천히!" : "에러";
-        // 에러 시 버튼에 잠깐 표시
         btn.innerHTML = `<span class="text-xs text-red-500">${msg}</span>`;
         setTimeout(() => { btn.innerHTML = originalHTML; btn.disabled = false; }, 1000);
-        return; // finally로 바로 가지 않게 처리
+        return; 
     } 
 
-    // 정상 복구
     btn.innerHTML = originalHTML;
     btn.disabled = false;
 };
