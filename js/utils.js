@@ -2,21 +2,34 @@
 // 공통 유틸리티 (알림창 클릭 간섭 버그 수정됨)
 
 // 1. 토스트 알림 띄우기
-export function showToast(message) {
+export function showToast(message, type = 'success') {
     const toast = document.getElementById('toast-notification');
     const msgEl = document.getElementById('toast-message');
     
     if (!toast || !msgEl) return;
 
     msgEl.textContent = message;
+    
+    // type에 따른 아이콘 색상 변경 (선택사항)
+    const toastIcon = toast.querySelector('svg');
+    if (toastIcon) {
+        if (type === 'error') {
+            toastIcon.classList.remove('text-green-400');
+            toastIcon.classList.add('text-red-400');
+        } else {
+            toastIcon.classList.remove('text-red-400');
+            toastIcon.classList.add('text-green-400');
+        }
+    }
+    
     // 나타날 때: invisible 제거
     toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none', 'invisible');
     
-    // 2초 뒤 사라짐
+    // 3초 뒤 사라짐
     setTimeout(() => {
         // 사라질 때: invisible 추가 (클릭 간섭 원천 차단)
         toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none', 'invisible');
-    }, 2000);
+    }, 3000);
 }
 
 // 2. 실행 취소 토스트 띄우기

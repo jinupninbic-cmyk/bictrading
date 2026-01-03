@@ -2,7 +2,7 @@
 // 애플리케이션의 진입점 (Entry Point) & 상태 관리
 
 import { monitorAuthState, loginUser, logoutUser } from "./auth.js";
-import { subscribeToPendingOrders, subscribeToCompletedOrders, updateOrderQty, completeOrder, revertOrder, uploadBatchOrders, clearAllOrders, deleteOrderByID } from "./db.js";
+import { subscribeToPendingOrders, subscribeToCompletedOrders, updateOrderQty, completeOrder, revertOrder, uploadBatchOrders, clearAllOrders, deleteOrderByID, updateOrderStatusByOrderId } from "./db.js";
 import { showLoginScreen, showAppScreen, toggleLoading, updateTabStyle, renderList } from "./ui.js";
 import { parseExcelFile, exportOrdersToExcel } from "./excel.js";
 import { showToast, showUndoToast, getTodayStr, getPastDateStr } from "./utils.js";
@@ -349,6 +349,27 @@ window.app_downloadFilteredTSV = () => {
 };
 
 window.app_revertOrder = async (id) => { if(!confirm("복구하시겠습니까?")) return; try { await revertOrder(id); showToast("복구됨"); } catch(e) {} };
+
+// 작업자 액션: 발주서의 모든 항목을 다음 단계로 업데이트
+window.updateWorkerStep = async (orderId, nextStep) => {
+    if (!orderId || !nextStep) {
+        showToast("오류: 발주번호 또는 단계 정보가 없습니다.");
+        return;
+    }
+    
+    try {
+        const count = await updateOrderStatusByOrderId(orderId, nextStep);
+        if (count > 0) {
+            showToast(`처리 완료: ${orderId}의 ${count}개 항목이 단계 ${nextStep}로 업데이트되었습니다.`);
+            // 화면 갱신은 실시간 구독(onSnapshot)이 자동으로 처리함
+        } else {
+            showToast("업데이트할 항목이 없습니다.");
+        }
+    } catch (error) {
+        console.error("업데이트 오류:", error);
+        showToast("처리 중 오류가 발생했습니다: " + error.message);
+    }
+};
 window.app_clearAllData = async () => { if(prompt("초기화하려면 '초기화' 입력")!=="초기화") return; toggleLoading(true); try { await clearAllOrders(); alert("삭제 완료"); window.location.reload(); } catch(e) { alert("실패"); } finally { toggleLoading(false); } };
 async function handleFileUpload(e) { 
     const file = e.target.files[0]; if (!file) return; toggleLoading(true);

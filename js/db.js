@@ -120,3 +120,22 @@ export async function deleteOrderByID(orderId) {
     await batch.commit(); // 한 번에 삭제 실행
     return snapshot.size; // 몇 개 지웠는지 개수 반환
 }
+
+// [추가] 특정 발주서(order_id)의 모든 문서의 status를 업데이트
+export async function updateOrderStatusByOrderId(orderId, nextStep) {
+    const q = query(
+        collection(db, COLLECTIONS.ORDERS),
+        where("order_id", "==", orderId)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return 0; // 업데이트할 게 없으면 0 리턴
+
+    const batch = writeBatch(db);
+    snapshot.forEach(doc => {
+        batch.update(doc.ref, { status: nextStep });
+    });
+
+    await batch.commit(); // 한 번에 업데이트 실행
+    return snapshot.size; // 몇 개 업데이트했는지 개수 반환
+}

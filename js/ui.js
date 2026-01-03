@@ -308,6 +308,10 @@ function renderCompletedList(container, orders) {
         div.className = `mb-4 ${finalBgClass} rounded-xl shadow-sm border ${finalBorderClass} overflow-hidden transition duration-500`;
         if (isDownloaded) div.style.cssText = divOpacity;
 
+        // 🔥 주문 레벨 상태 액션 UI 생성 (첫 번째 아이템의 status 사용)
+        const representativeItem = items[0];
+        const statusActionUI = createStatusActionUI(representativeItem);
+
         // 🔥 헤더 부분 UI 수정
         div.innerHTML = `
             <div onclick="window.ui_toggleAccordion('${orderId}')" class="${bgClass} px-4 py-4 border-b ${borderClass} flex flex-col cursor-pointer transition select-none">
@@ -338,6 +342,7 @@ function renderCompletedList(container, orders) {
             <div id="content-${orderId}" class="divide-y divide-gray-100 ${isExpanded ? '' : 'hidden'} bg-white">
                 ${items.map(item => createCompletedRowHTML(item)).join('')}
             </div>
+            ${statusActionUI ? `<div class="border-t border-gray-200 bg-gray-50 px-4 py-3">${statusActionUI}</div>` : ''}
         `;
         container.appendChild(div);
     });
@@ -488,73 +493,72 @@ function createStatusActionUI(item) {
         statusNum = item.status;
     }
     
-    const itemId = item.id;
+    const orderId = item.order_id; // orderId 사용
     
     switch (statusNum) {
         case 5: // 견적완료
             return `
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="bg-gray-100 p-3 rounded">
-                        <p class="text-sm text-gray-700 font-medium mb-2">견적서가 도착했습니다.</p>
-                        <button onclick="event.stopPropagation(); window.app_viewEstimate('${itemId}')" 
-                                class="w-full bg-blue-500 text-white py-2 rounded mt-2 hover:bg-blue-600 transition font-bold">
-                            견적서 확인하기
-                        </button>
-                    </div>
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-700 font-medium mb-2">견적서가 도착했습니다.</p>
+                    <button onclick="event.stopPropagation(); window.updateWorkerStep('${orderId}', 6)" 
+                            class="w-full bg-blue-500 text-white py-2 rounded mt-2 hover:bg-blue-600 transition font-bold">
+                        견적서 확인하기
+                    </button>
+                </div>
+            `;
+        
+        case 6: // 2차검수중
+            return `
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-700 font-medium mb-2">검수 및 포장이 완료되었나요?</p>
+                    <button onclick="event.stopPropagation(); window.updateWorkerStep('${orderId}', 7)" 
+                            class="w-full bg-blue-500 text-white py-2 rounded mt-2 hover:bg-blue-600 transition font-bold">
+                        2차 검수 완료
+                    </button>
                 </div>
             `;
         
         case 9: // 송장완료
             return `
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="bg-gray-100 p-3 rounded">
-                        <p class="text-sm text-gray-700 font-medium mb-2">송장 등록 완료. 인쇄 필요.</p>
-                        <button onclick="event.stopPropagation(); window.app_markPrinted('${itemId}')" 
-                                class="w-full bg-orange-500 text-white py-2 rounded mt-2 hover:bg-orange-600 transition font-bold">
-                            인쇄 완료
-                        </button>
-                    </div>
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-700 font-medium mb-2">송장 등록 완료. 인쇄 필요.</p>
+                    <button onclick="event.stopPropagation(); window.updateWorkerStep('${orderId}', 10)" 
+                            class="w-full bg-orange-500 text-white py-2 rounded mt-2 hover:bg-orange-600 transition font-bold">
+                        인쇄 완료
+                    </button>
                 </div>
             `;
         
         case 10: // 인쇄완료
             return `
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="bg-gray-100 p-3 rounded">
-                        <p class="text-sm text-gray-700 font-medium mb-2">패킹 후 운송장 전송 필요.</p>
-                        <button onclick="event.stopPropagation(); window.app_sendTracking('${itemId}')" 
-                                class="w-full bg-green-600 text-white py-2 rounded mt-2 hover:bg-green-700 transition font-bold">
-                            운송장 전송
-                        </button>
-                    </div>
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-700 font-medium mb-2">패킹 후 운송장 전송 필요.</p>
+                    <button onclick="event.stopPropagation(); window.updateWorkerStep('${orderId}', 11)" 
+                            class="w-full bg-green-600 text-white py-2 rounded mt-2 hover:bg-green-700 transition font-bold">
+                        운송장 전송
+                    </button>
                 </div>
             `;
         
         case 3: // Completed
             return `
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="bg-gray-100 p-3 rounded">
-                        <p class="text-sm text-gray-600 font-medium">관리자가 확인 중입니다...</p>
-                    </div>
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-600 font-medium">관리자가 확인 중입니다...</p>
                 </div>
             `;
         
         case 4: // 견적작성
             return `
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="bg-gray-100 p-3 rounded">
-                        <p class="text-sm text-gray-600 font-medium">견적서 작성 중...</p>
-                    </div>
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-600 font-medium">견적서 작성 중...</p>
                 </div>
             `;
         
         case 7:
         case 8: // 송장등록
             return `
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="bg-gray-100 p-3 rounded">
-                        <p class="text-sm text-gray-600 font-medium">송장 등록 중...</p>
-                    </div>
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-600 font-medium">송장 등록 중...</p>
                 </div>
             `;
         
@@ -562,10 +566,8 @@ function createStatusActionUI(item) {
         case 12:
         case 13:
             return `
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="bg-gray-100 p-3 rounded">
-                        <p class="text-sm text-gray-600 font-medium">처리 중...</p>
-                    </div>
+                <div class="bg-gray-100 p-3 rounded">
+                    <p class="text-sm text-gray-600 font-medium">처리 중...</p>
                 </div>
             `;
         
@@ -577,7 +579,6 @@ function createStatusActionUI(item) {
 // [Helper] 완료/수정용 행 HTML
 function createCompletedRowHTML(item) {
     const finalQty = (item.picked_qty !== undefined) ? item.picked_qty : item.ordered_qty;
-    const statusActionUI = createStatusActionUI(item);
     return `
         <div class="p-3 border-b border-gray-100 hover:bg-green-50 transition-colors bg-white">
             <div class="flex justify-between items-center">
@@ -604,7 +605,6 @@ function createCompletedRowHTML(item) {
                     </div>
                 </div>
             </div>
-            ${statusActionUI}
         </div>
     `;
 }
