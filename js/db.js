@@ -25,20 +25,27 @@ export function subscribeToPendingOrders(callback) {
 }
 
 
-// 2. 완료 탭용 구독 (다시 비용 절감 모드로 복귀!)
+// 2. 완료 탭용 구독 (영구 보존: Completed 또는 status >= 3)
 export function subscribeToCompletedOrders(callback) {
-    // 🔥 [복구] "완료된 것만 가져와!" (돈 아끼기)
+    // 🔥 완료 탭은 status가 "Completed"이거나 3 이상의 숫자일 때 표시
+    // Firestore 쿼리 제약(문자열과 숫자 혼합 OR 조건 불가)으로 인해 클라이언트 측 필터링 사용
+    // Pending이 아닌 항목만 가져와서 클라이언트에서 추가 필터링 (비용 절감)
+    // 참고: status != "Pending" 쿼리 사용 시 Firestore 콘솔에서 복합 인덱스 생성이 필요할 수 있음
     const q = query(
         collection(db, COLLECTIONS.ORDERS),
-        where("status", "==", "Completed") 
-        // 필요한 경우 정렬 추가: orderBy("created_at", "desc")
-        // 단, where와 orderBy를 같이 쓰려면 파이어베이스 콘솔에서 색인(Index) 설정이 필요할 수 있음
+        where("status", "!=", "Pending")
     );
 
     return onSnapshot(q, (snapshot) => {
         const orders = [];
         snapshot.forEach(doc => {
-            orders.push({ id: doc.id, ...doc.data() });
+            const data = { id: doc.id, ...doc.data() };
+            const status = data.status;
+            
+            // status가 "Completed"이거나 숫자이고 3 이상인 경우만 포함
+            if (status === "Completed" || (typeof status === "number" && status >= 3)) {
+                orders.push(data);
+            }
         });
         callback(orders);
     });
